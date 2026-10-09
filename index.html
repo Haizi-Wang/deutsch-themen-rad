@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Themenrad für mündliches Deutsch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #14101a;
+      --panel: #1e1828;
+      --ink: #f6f1ea;
+      --muted: #c9bdb0;
+      --accent: #f3c16b;
+      --accent-deep: #d89a3a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Outfit", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 20% 10%, #3a2658 0%, transparent 36%),
+        radial-gradient(circle at 90% 80%, #2a3d4a 0%, transparent 32%),
+        var(--bg);
+    }
+
+    .page {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 36px 20px 56px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-family: "Fraunces", serif;
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      letter-spacing: 0.01em;
+    }
+
+    .lede {
+      margin: 0 auto 28px;
+      max-width: 42ch;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .stage {
+      position: relative;
+      width: min(100%, 520px);
+      margin: 0 auto 28px;
+    }
+
+    .wheel-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.38));
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .slice-label {
+      font-size: 13px;
+      font-weight: 600;
+      fill: #fff;
+      pointer-events: none;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    }
+
+    .hub {
+      fill: #2a2234;
+      stroke: #f6f1ea;
+      stroke-width: 6;
+    }
+
+    .pointer {
+      transform-box: view-box;
+      transform-origin: 200px 200px;
+      transition: transform 0s;
+    }
+
+    .pointer.spinning {
+      transition: transform 4.2s cubic-bezier(0.12, 0.72, 0.08, 1);
+    }
+
+    .spin {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 42px;
+      font: 700 1.05rem "Outfit", sans-serif;
+      letter-spacing: 0.04em;
+      color: #1a1208;
+      background: linear-gradient(180deg, #ffe3a3, var(--accent) 45%, var(--accent-deep));
+      box-shadow: 0 10px 0 #9a6a24, 0 16px 24px rgba(0, 0, 0, 0.28);
+      cursor: pointer;
+    }
+
+    .spin:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .spin:active:not(:disabled) {
+      transform: translateY(4px);
+      box-shadow: 0 6px 0 #9a6a24, 0 10px 16px rgba(0, 0, 0, 0.28);
+    }
+
+    .spin:disabled {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    .result {
+      margin: 28px auto 0;
+      max-width: 420px;
+      min-height: 92px;
+      padding: 18px 20px;
+      border-radius: 18px;
+      background: rgba(30, 24, 40, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .result .kicker {
+      margin: 0 0 6px;
+      font-size: 0.78rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .result .topic {
+      margin: 0;
+      font-family: "Fraunces", serif;
+      font-size: 1.55rem;
+    }
+
+    .result .hint {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Themenrad für mündliches Deutsch</h1>
+    <p class="lede">Klicke auf den Button. Der Zeiger bleibt zufällig auf einem Feld stehen. Sprich dann frei zu diesem Thema.</p>
+
+    <div class="stage">
+      <div class="wheel-wrap" id="wheelWrap"></div>
+    </div>
+
+    <button class="spin" id="spinBtn" type="button">Klicken</button>
+
+    <section class="result" aria-live="polite">
+      <p class="kicker">Dein Thema</p>
+      <p class="topic" id="topicName">Bereit</p>
+      <p class="hint" id="topicHint">Jedes Klicken bringt ein neues Übungsthema.</p>
+    </section>
+  </main>
+
+  <script>
+    const TOPICS = [
+      { label: "Alltag", name: "Interessantes Alltagsleben", hint: "Erzähle von einem lustigen oder unerwarteten Moment im Alltag." },
+      { label: "Beruf", name: "Beruf und Arbeit", hint: "Sprich über Jobs, Praktika und deine beruflichen Pläne." },
+      { label: "Gesellschaft", name: "Gesellschaft", hint: "Diskutiere ein gesellschaftliches Thema oder eine aktuelle Debatte." },
+      { label: "Kultur", name: "Kultur und Tradition", hint: "Beschreibe Feste, Bräuche oder kulturelle Unterschiede." },
+      { label: "Sport", name: "Sport und Bewegung", hint: "Rede über Sportarten, Wettkämpfe oder Bewegung im Alltag." },
+      { label: "Reisen", name: "Reisen und Orte", hint: "Erzähle von Reisen, Städten oder deiner Heimat." },
+      { label: "Essen", name: "Essen und Trinken", hint: "Sprich über Essen, Kochen und Essgewohnheiten." },
+      { label: "Familie", name: "Familie und Freunde", hint: "Beschreibe Familie, Freundschaft und wichtige Beziehungen." },
+      { label: "Bildung", name: "Bildung und Studium", hint: "Rede über Schule, Studium und das Sprachenlernen." },
+      { label: "Umwelt", name: "Umwelt und Natur", hint: "Sprich über Umwelt, Klima oder Naturerlebnisse." },
+      { label: "Medien", name: "Medien und Technik", hint: "Erzähle, wie du Handy, Internet oder KI nutzt." },
+      { label: "Freizeit", name: "Hobbys und Freizeit", hint: "Beschreibe deine Hobbys und warum sie dir Spaß machen." }
+    ];
+
+    const COLORS = [
+      "#c44536", "#e07a3d", "#e9b44c", "#7ba05b",
+      "#2a9d8f", "#3d7ea6", "#4c5fd7", "#6f42c1",
+      "#b5179e", "#d6409f", "#7d5260", "#8d6e4c"
+    ];
+
+    const CX = 200;
+    const CY = 200;
+    const RADIUS = 178;
+    const SLICE = 360 / TOPICS.length;
+
+    function polar(deg, r) {
+      const rad = (deg * Math.PI) / 180;
+      return [CX + r * Math.sin(rad), CY - r * Math.cos(rad)];
+    }
+
+    function slicePath(index) {
+      const start = index * SLICE;
+      const end = start + SLICE;
+      const [x1, y1] = polar(start, RADIUS);
+      const [x2, y2] = polar(end, RADIUS);
+      return `M ${CX} ${CY} L ${x1} ${y1} A ${RADIUS} ${RADIUS} 0 0 1 ${x2} ${y2} Z`;
+    }
+
+    const slices = TOPICS.map((topic, i) => {
+      const mid = i * SLICE + SLICE / 2;
+      const [lx, ly] = polar(mid, 118);
+      return `
+        <path d="${slicePath(i)}" fill="${COLORS[i]}" />
+        <text class="slice-label" x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle">${topic.label}</text>
+      `;
+    }).join("");
+
+    document.getElementById("wheelWrap").innerHTML = `
+      <svg viewBox="0 0 400 400" role="img" aria-label="Themenrad mit zwölf Feldern">
+        <circle cx="200" cy="200" r="190" fill="#f6f1ea" />
+        ${slices}
+        <circle class="hub" cx="200" cy="200" r="28" />
+        <g class="pointer" id="pointer">
+          <polygon points="200,46 214,118 200,108 186,118" fill="#f3c16b" stroke="#1a1208" stroke-width="2" />
+          <circle cx="200" cy="200" r="14" fill="#f3c16b" stroke="#1a1208" stroke-width="3" />
+        </g>
+      </svg>
+    `;
+
+    const pointer = document.getElementById("pointer");
+    const spinBtn = document.getElementById("spinBtn");
+    const topicName = document.getElementById("topicName");
+    const topicHint = document.getElementById("topicHint");
+
+    let rotation = 0;
+    let busy = false;
+
+    function pickIndex() {
+      return Math.floor(Math.random() * TOPICS.length);
+    }
+
+    spinBtn.addEventListener("click", () => {
+      if (busy) return;
+      busy = true;
+      spinBtn.disabled = true;
+      topicName.textContent = "Der Zeiger dreht sich …";
+      topicHint.textContent = "Er bleibt gleich auf einem Feld stehen.";
+
+      const index = pickIndex();
+      const extraTurns = 5 + Math.floor(Math.random() * 4);
+      const landing = index * SLICE + SLICE / 2;
+      const currentMod = ((rotation % 360) + 360) % 360;
+      let delta = (landing - currentMod + 360) % 360;
+      if (delta < 20) delta += 360;
+      rotation += extraTurns * 360 + delta;
+
+      pointer.classList.add("spinning");
+      pointer.style.transform = `rotate(${rotation}deg)`;
+
+      window.setTimeout(() => {
+        const topic = TOPICS[index];
+        topicName.textContent = topic.name;
+        topicHint.textContent = topic.hint;
+        pointer.classList.remove("spinning");
+        spinBtn.disabled = false;
+        busy = false;
+      }, 4300);
+    });
+  </script>
+</body>
+</html>
