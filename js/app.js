@@ -26,6 +26,7 @@ import {
   stopSpeak,
   startRecorder,
 } from "./speech.js?v=5";
+import { t, applyChrome, toggleLang } from "./i18n.js?v=1";
 
 const STORAGE = "einsatz-c1-v1";
 const COLORS = [
@@ -169,16 +170,16 @@ function renderHud() {
   const n = campN();
   const todayQ = QUESTS.filter((q) => state.done[q.id]).length;
   const daysDone = PLAN.filter((_, i) => campDayComplete(state, i + 1)).length;
-  $("#xpChip").innerHTML = `XP <strong>${state.xp}</strong>`;
-  $("#streakChip").innerHTML = `Serie <strong>${state.streak}</strong>`;
+  $("#xpChip").innerHTML = `${t("xp")} <strong>${state.xp}</strong>`;
+  $("#streakChip").innerHTML = `${t("serie")} <strong>${state.streak}</strong>`;
   if (n < 1) {
-    $("#dayChip").innerHTML = `Start <strong>30.10.</strong>`;
+    $("#dayChip").innerHTML = `${t("startOn")} <strong>30.10.</strong>`;
     $("#barFill").style.width = "0%";
   } else if (n > 30) {
-    $("#dayChip").innerHTML = `Fertig <strong>${daysDone}/30</strong>`;
+    $("#dayChip").innerHTML = `${t("fertig")} <strong>${daysDone}/30</strong>`;
     $("#barFill").style.width = `${(daysDone / 30) * 100}%`;
   } else {
-    $("#dayChip").innerHTML = `Tag <strong>${n}/30</strong> · ${todayQ}/${QUESTS.length}`;
+    $("#dayChip").innerHTML = `${t("tag")} <strong>${n}/30</strong> · ${todayQ}/${QUESTS.length}`;
     $("#barFill").style.width = `${(n / 30) * 100}%`;
   }
 }
@@ -192,6 +193,7 @@ function navActive(route) {
 function route() {
   state = ensureDay(load());
   save(state);
+  applyChrome();
   renderHud();
   const raw = (location.hash || "#/plan").replace(/^#\/?/, "");
   const parts = (raw || "plan").split("/");
@@ -223,7 +225,7 @@ function route() {
 }
 
 function backLink(to = "heute") {
-  return `<div class="toolbar"><button class="btn ghost small" type="button" data-go="${to}">Zurück</button></div>`;
+  return `<div class="toolbar"><button class="btn ghost small" type="button" data-go="${to}">${t("back")}</button></div>`;
 }
 
 function criteriaList(items) {
@@ -252,9 +254,9 @@ function calendarHtml(active = activeN()) {
 function weeksHtml() {
   return `<div class="weeks">${WEEKS.map((w) => `
     <article class="week">
-      <p class="kicker">Woche ${w.n}</p>
-      <h3>${w.title}</h3>
-      <p class="hint">${w.lede} Tage ${w.days[0]}–${w.days[1]}.</p>
+      <p class="kicker">${t("woche", { n: w.n })}</p>
+      <h3>${t("week" + w.n)}</h3>
+      <p class="hint">${t("week" + w.n + "Lede")} ${t("weekDays", { a: w.days[0], b: w.days[1] })}</p>
     </article>`).join("")}</div>`;
 }
 
@@ -269,20 +271,20 @@ function briefingHtml(p, { preview = false } = {}) {
   const press = pressFor(p);
   return `
     <section class="hero">
-      <p class="kicker">Tag ${p.n} / 30 · ${p.date}</p>
+      <p class="kicker">${t("briefingDay", { n: p.n, date: p.date })}</p>
       <h2>${p.title}</h2>
       <p class="lede">${p.focus}</p>
-      ${p.boss ? `<p class="hint"><strong>Boss:</strong> ${p.boss}</p>` : ""}
-      ${wait ? `<p class="hint">Vorschau. Der Einsatz startet am 30. Oktober 2026 — heute nur lesen.</p>` : ""}
-      ${future && !wait ? `<p class="hint">Dieser Tag ist noch verschlossen. Du kannst lesen, nicht abhaken.</p>` : ""}
+      ${p.boss ? `<p class="hint"><strong>${t("boss")}:</strong> ${p.boss}</p>` : ""}
+      ${wait ? `<p class="hint">${t("previewStart")}</p>` : ""}
+      ${future && !wait ? `<p class="hint">${t("dayLocked")}</p>` : ""}
     </section>
     <ul class="list">
-      <li><strong>Tagebuch:</strong> ${p.diary}</li>
-      <li><strong>Duell:</strong> ${p.thesis}</li>
-      <li><strong>Szene:</strong> ${sceneById(p.scene).title}</li>
-      <li><strong>Zeitung:</strong> ${press.outlet} · ${press.genre} — ${press.title}. Lautlesen, dann mündliche Pointe.</li>
-      <li><strong>Schreiben:</strong> ${p.writeTitle}</li>
-      ${p.boss ? `<li><strong>Boss:</strong> ${p.boss}</li>` : ""}
+      <li><strong>${t("labDiary")}:</strong> ${p.diary}</li>
+      <li><strong>${t("labDuell")}:</strong> ${p.thesis}</li>
+      <li><strong>${t("labScene")}:</strong> ${sceneById(p.scene).title}</li>
+      <li><strong>${t("labPress")}:</strong> ${t("pressLine", { outlet: press.outlet, genre: press.genre, title: press.title })}</li>
+      <li><strong>${t("labWrite")}:</strong> ${p.writeTitle}</li>
+      ${p.boss ? `<li><strong>${t("boss")}:</strong> ${p.boss}</li>` : ""}
     </ul>
     ${preview || wait || future ? "" : ""}`;
 }
@@ -295,12 +297,12 @@ function questCards(p) {
     const done = Boolean(doneMap[q.id]);
     return `
       <button class="card ${done ? "done" : ""}" type="button" data-go="${frozen ? "plan" : q.route}" ${frozen ? "disabled" : ""}>
-        <p class="kicker">${q.kicker}</p>
-        <h2>${q.title}</h2>
-        <p>${q.blurb}</p>
+        <p class="kicker">${t("q_" + q.id + "_k")}</p>
+        <h2>${t("q_" + q.id + "_t")}</h2>
+        <p>${t("q_" + q.id + "_b")}</p>
         <div class="meta">
-          <span>${q.minutes} Min · ${q.xp} XP</span>
-          <span class="badge">${frozen ? "ab 30.10." : done ? "erledigt" : "offen"}</span>
+          <span>${t("questMinXp", { min: q.minutes, xp: q.xp })}</span>
+          <span class="badge">${frozen ? t("badgeFrom") : done ? t("badgeDone") : t("badgeOpen")}</span>
         </div>
       </button>`;
   }).join("")}</div>`;
@@ -312,15 +314,15 @@ function renderPlan() {
   view.innerHTML = `
     <section class="hero">
       <p class="kicker">${APP.name}</p>
-      <h2>30 Tage aktive Ausgabe</h2>
-      <p class="lede">Start: ${START}. Acht Quests täglich, C1+ mündlich. Kein Vokabelzettel. Wochenenden länger, Tag 7/14/21/30 mit Boss.</p>
+      <h2>${t("planH2")}</h2>
+      <p class="lede">${t("planLede", { start: START })}</p>
     </section>
     ${weeksHtml()}
     ${calendarHtml(viewN)}
     ${briefingHtml(p, { preview: campN() < 1 })}
     <div class="row">
-      <a class="btn" href="#/heute">Zum heutigen Einsatz</a>
-      <a class="btn ghost" href="#/pruefung">TELC-C1-Ablauf</a>
+      <a class="btn" href="#/heute">${t("toToday")}</a>
+      <a class="btn ghost" href="#/pruefung">${t("telcFlow")}</a>
     </div>`;
 }
 
@@ -330,26 +332,26 @@ function renderHome() {
   view.innerHTML = `
     ${briefingHtml(p)}
     ${calendarHtml(p.n)}
-    ${now < 1 ? `<p class="note">Karten öffnen ab ${START}. Bis dahin: Plan lesen, nicht vorspielen.</p>` : questCards(p)}`;
+    ${now < 1 ? `<p class="note">${t("cardsFrom", { start: START })}</p>` : questCards(p)}`;
 }
 
 function renderSpeakHub() {
   if (trainingLocked()) return;
   view.innerHTML = `
     <section class="hero">
-      <p class="kicker">Sprechen</p>
-      <h2>Aktive Ausgabe</h2>
-      <p class="lede">Tagebuch, Duell, Gegenüber, Zeitung vorlesen, Sprechzüge. Mikrofon an, Ausreden aus.</p>
+      <p class="kicker">${t("speakKicker")}</p>
+      <h2>${t("speakH2")}</h2>
+      <p class="lede">${t("speakLede")}</p>
     </section>
     <div class="row">
-      <button class="btn" data-go="tagebuch">Mundtagebuch</button>
-      <button class="btn" data-go="duell">Denkduell</button>
-      <button class="btn" data-go="gespraech">Gesprächspartner</button>
-      <button class="btn" data-go="pruefung">TELC C1</button>
-      <button class="btn" data-go="zeitung">Zeitung vorlesen</button>
-      <button class="btn" data-go="zuege">Sprechzüge</button>
+      <button class="btn" data-go="tagebuch">${t("btnDiary")}</button>
+      <button class="btn" data-go="duell">${t("btnDuell")}</button>
+      <button class="btn" data-go="gespraech">${t("btnTalk")}</button>
+      <button class="btn" data-go="pruefung">${t("btnTelc")}</button>
+      <button class="btn" data-go="zeitung">${t("btnPress")}</button>
+      <button class="btn" data-go="zuege">${t("btnZuege")}</button>
     </div>
-    <p class="note">${canRecord() ? "Aufnahme bereit." : "Kein Mikrofonzugriff."} ${canRecognize() ? "Live-Erkennung bereit (Chrome/Edge)." : "Spracherkennung in diesem Browser nicht verfügbar — tippen geht immer."}</p>
+    <p class="note">${canRecord() ? t("recReady") : t("recNoMic")} ${canRecognize() ? t("recLive") : t("recNoLive")}</p>
     ${criteriaList(SPEAKING_CRITERIA)}`;
 }
 
@@ -360,17 +362,17 @@ function bindRecorder(logEl, onstop, onstart) {
     if (!session) {
       try {
         session = await startRecorder();
-        btn.textContent = "Aufnahme stoppen";
-        logEl.textContent = "Aufnahme läuft …";
+        btn.textContent = t("recStop");
+        logEl.textContent = t("recRunning");
         onstart?.();
       } catch {
-        logEl.textContent = "Mikrofon verweigert. Tippe stattdessen.";
+        logEl.textContent = t("recDenied");
       }
       return;
     }
     const blob = await session.stop();
     session = null;
-    btn.textContent = "Nochmal aufnehmen";
+    btn.textContent = t("recAgain");
     const url = URL.createObjectURL(blob);
     onstop(url);
   });
@@ -381,10 +383,10 @@ function trainingLocked() {
   view.innerHTML = `
     <section class="panel">
       ${backLink("plan")}
-      <p class="kicker">Noch nicht</p>
-      <h2>Übung ab dem 30. Oktober</h2>
-      <p class="lede">Heute nur der 30-Tage-Plan. Morgen geht der erste Einsatz los — ungeschönt, mit Boss am siebten Tag.</p>
-      <div class="row"><a class="btn" href="#/plan">Plan öffnen</a></div>
+      <p class="kicker">${t("notYet")}</p>
+      <h2>${t("lockH2")}</h2>
+      <p class="lede">${t("lockLede")}</p>
+      <div class="row"><a class="btn" href="#/plan">${t("openPlan")}</a></div>
     </section>`;
   return true;
 }
@@ -396,13 +398,13 @@ function renderDiary() {
   view.innerHTML = `
     <section class="panel">
       ${backLink()}
-      <p class="kicker">Mundtagebuch</p>
+      <p class="kicker">${t("btnDiary")}</p>
       <p class="prompt">${p.hook}</p>
-      <p class="hint">Drei Minuten. Kein Skript. Danach die Nachhaken — laut beantworten.</p>
+      <p class="hint">${t("diaryHint")}</p>
       <div class="row">
-        <button class="btn" id="recBtn" type="button">Aufnahme starten</button>
-        <button class="btn ghost" id="nextQ" type="button">Nächstes Nachhaken</button>
-        <button class="btn ghost" id="doneBtn" type="button">Quest abhaken</button>
+        <button class="btn" id="recBtn" type="button">${t("recStart")}</button>
+        <button class="btn ghost" id="nextQ" type="button">${t("nextFollow")}</button>
+        <button class="btn ghost" id="doneBtn" type="button">${t("checkQuest")}</button>
       </div>
       <audio id="player" class="hidden" controls></audio>
       <p class="live" id="follow">${p.followups[0]}</p>
@@ -430,24 +432,24 @@ function renderDuell() {
   view.innerHTML = `
     <section class="panel">
       ${backLink("sprechen")}
-      <p class="kicker">Denkduell</p>
-      <h2>Würfeln, denken, halten, kippen</h2>
+      <p class="kicker">${t("btnDuell")}</p>
+      <h2>${t("duellH2")}</h2>
       <div class="row">
-        <button class="btn" id="spinBtn" type="button">Rad drehen</button>
-        <button class="btn ghost" id="thesisBtn" type="button">Neue These</button>
+        <button class="btn" id="spinBtn" type="button">${t("spin")}</button>
+        <button class="btn ghost" id="thesisBtn" type="button">${t("newThesis")}</button>
       </div>
       <div class="wheel-wrap" id="wheelWrap"></div>
-      <p class="kicker" style="margin-top:16px">Dein Thema</p>
+      <p class="kicker" style="margin-top:16px">${t("yourTopic")}</p>
       <p class="prompt" id="topicName">${pack.topic}</p>
       <p class="hint" id="topicHint">${pack.hint}</p>
       <p class="prompt" id="thesis">${pack.thesis}</p>
       <p class="timer" id="timer">00:45</p>
       <div class="row">
-        <button class="btn small" id="think" type="button">Denken 45s</button>
-        <button class="btn small" id="pro" type="button">Dafür 2:00</button>
-        <button class="btn small" id="con" type="button">Dagegen 1:30</button>
-        <button class="btn" id="recBtn" type="button">Aufnahme</button>
-        <button class="btn ghost" id="doneBtn" type="button">Quest abhaken</button>
+        <button class="btn small" id="think" type="button">${t("think45")}</button>
+        <button class="btn small" id="pro" type="button">${t("pro2")}</button>
+        <button class="btn small" id="con" type="button">${t("con90")}</button>
+        <button class="btn" id="recBtn" type="button">${t("recShort")}</button>
+        <button class="btn ghost" id="doneBtn" type="button">${t("checkQuest")}</button>
       </div>
       <audio id="player" class="hidden" controls></audio>
     </section>`;
@@ -487,7 +489,7 @@ function mountWheel() {
     return `<path d="${d}" fill="${COLORS[i]}" /><text class="slice-label" x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle">${topic.label}</text>`;
   }).join("");
   $("#wheelWrap").innerHTML = `
-    <svg viewBox="0 0 400 400" role="img" aria-label="Themenrad">
+    <svg viewBox="0 0 400 400" role="img" aria-label="${t("wheelAria")}">
       <circle cx="200" cy="200" r="190" fill="#f6f1ea" />
       ${slices}
       <circle class="hub" cx="200" cy="200" r="28" />
@@ -536,29 +538,29 @@ function renderTalk(forceExam = false) {
       ${backLink(forceExam ? "plan" : "sprechen")}
       <p class="kicker">${scene.title}</p>
       <h2>${scene.role}</h2>
-      <p class="hint">Register: ${scene.register}. KI korrigiert nur Sprachgefühl — keine Note, keine Predigt.</p>
+      <p class="hint">${t("registerHint", { reg: scene.register })}</p>
       ${exam ? `
         <p class="prompt">${thesis}</p>
         <div class="row">
-          <button class="btn small" id="telcOff" type="button">TELC offiziell</button>
-          <button class="btn ghost small" id="telcKurz" type="button">Kurzmodus</button>
+          <button class="btn small" id="telcOff" type="button">${t("telcOff")}</button>
+          <button class="btn ghost small" id="telcKurz" type="button">${t("telcKurz")}</button>
         </div>
         <div class="phases" id="phases"></div>
         <p class="timer" id="telcTimer">20:00</p>
         <p class="hint" id="phaseHint"></p>
         <div class="row">
-          <button class="btn small" id="phaseStart" type="button">Phase starten</button>
-          <button class="btn ghost small" id="phaseNext" type="button">Nächste Phase</button>
+          <button class="btn small" id="phaseStart" type="button">${t("phaseStart")}</button>
+          <button class="btn ghost small" id="phaseNext" type="button">${t("phaseNext")}</button>
         </div>
       ` : ""}
       <div class="chat" id="chat"></div>
-      <textarea id="you" placeholder="Deine Replik …"></textarea>
+      <textarea id="you" placeholder="${t("placeholderReply")}"></textarea>
       <div class="row">
-        <button class="btn" id="send" type="button">Sagen</button>
-        <button class="btn ghost" id="listenBtn" type="button">Zuhören (Mic)</button>
-        <button class="btn" id="recBtn" type="button">Aufnahme</button>
-        <button class="btn ghost" id="ki" type="button">KI: nur Sprachgefühl</button>
-        <button class="btn" id="doneBtn" type="button">Quest abhaken</button>
+        <button class="btn" id="send" type="button">${t("say")}</button>
+        <button class="btn ghost" id="listenBtn" type="button">${t("listenMic")}</button>
+        <button class="btn" id="recBtn" type="button">${t("recShort")}</button>
+        <button class="btn ghost" id="ki" type="button">${t("kiFeel")}</button>
+        <button class="btn" id="doneBtn" type="button">${t("checkQuest")}</button>
       </div>
       <audio id="player" class="hidden" controls></audio>
       <p class="note" id="status"></p>
@@ -602,12 +604,12 @@ function renderTalk(forceExam = false) {
     paintPhases();
     const p = current();
     const line = p.id === "vorbereitung"
-      ? `Vorbereitung. Thema: ${thesis}. Nur Stichworte.`
+      ? t("prepLine", { thesis })
       : p.id === "praesentation"
-        ? "Bitte, Sie haben das Wort. Kein Ablesen."
+        ? t("presLine")
         : p.id === "nachfragen"
-          ? "Vielen Dank. Ich habe ein paar Nachfragen."
-          : "Kommen wir zur Diskussion. Ich werde widersprechen.";
+          ? t("askLine")
+          : t("discLine");
     push("them", line);
     speak(line, { rate: 1.02 });
   };
@@ -618,15 +620,15 @@ function renderTalk(forceExam = false) {
       push("you", t);
       $("#you").value = "";
       $("#status").textContent = current().id === "vorbereitung"
-        ? "Stichwort notiert. Die Prüferin schweigt in dieser Phase."
-        : "Präsentation läuft. Partner kommt erst bei Nachfragen.";
+        ? t("prepNote")
+        : t("presNote");
       return;
     }
     push("you", t);
     $("#you").value = "";
     const useKi = $("#ki").dataset.on === "1";
     if (useKi) {
-      $("#status").textContent = "KI hört aufs Sprachgefühl …";
+      $("#status").textContent = t("kiListening");
       try {
         const reply = await kiChat(scene, transcriptFrom(chat), t, exam ? current().id : "");
         push("them", reply);
@@ -634,7 +636,7 @@ function renderTalk(forceExam = false) {
         $("#status").textContent = "";
         return;
       } catch (e) {
-        $("#status").textContent = "KI nicht erreichbar — lokaler Partner. " + e.message;
+        $("#status").textContent = t("kiFail") + e.message;
       }
     }
     const reply = localReply();
@@ -643,7 +645,7 @@ function renderTalk(forceExam = false) {
   };
   if (exam) {
     paintPhases();
-    push("them", `Solo-Simulation telc Deutsch C1. Thema: ${thesis}. ${current().hint}`);
+    push("them", t("telcOpen", { thesis, hint: current().hint }));
     const syncModeBtns = () => {
       $("#telcOff").classList.toggle("ghost", mode !== "official");
       $("#telcKurz").classList.toggle("ghost", mode !== "kurz");
@@ -674,13 +676,13 @@ function renderTalk(forceExam = false) {
   let acc = "";
   $("#listenBtn").onclick = () => {
     if (!canRecognize()) {
-      $("#status").textContent = "Keine Web-Speech-API. Tippe.";
+      $("#status").textContent = t("noSpeech");
       return;
     }
     if (rec) {
       rec.stop();
       rec = null;
-      $("#listenBtn").textContent = "Zuhören (Mic)";
+      $("#listenBtn").textContent = t("listenMic");
       if (acc) submit(acc);
       acc = "";
       return;
@@ -692,19 +694,19 @@ function renderTalk(forceExam = false) {
       },
       onend() {
         rec = null;
-        $("#listenBtn").textContent = "Zuhören (Mic)";
+        $("#listenBtn").textContent = t("listenMic");
       },
       onerror() {
-        $("#status").textContent = "Erkennung abgebrochen.";
+        $("#status").textContent = t("recAbort");
       },
     });
     rec.start();
-    $("#listenBtn").textContent = "Mic läuft — erneut klicken zum Senden";
+    $("#listenBtn").textContent = t("listenRunning");
   };
   $("#ki").onclick = () => {
     const on = $("#ki").dataset.on === "1";
     $("#ki").dataset.on = on ? "0" : "1";
-    $("#ki").textContent = on ? "KI: nur Sprachgefühl" : "KI an — nur Sprachgefühl, kein Scoring";
+    $("#ki").textContent = on ? t("kiFeel") : t("kiOn");
   };
   $("#doneBtn").onclick = () => {
     complete("gespraech");
@@ -795,25 +797,25 @@ function renderNuance() {
   view.innerHTML = `
     <section class="panel" id="nuPanel">
       ${backLink()}
-      <p class="kicker">Feinschliff</p>
-      <h2>Fünf Mikroschnitte</h2>
-      <p class="hint">Nicht Vokabelpauken. Haltung, Kollokation, Register.</p>
+      <p class="kicker">${t("nuKicker")}</p>
+      <h2>${t("nuH2")}</h2>
+      <p class="hint">${t("nuHint")}</p>
       <p class="prompt" id="nuTask"></p>
       <p class="live" id="nuOff"></p>
-      <textarea id="nuYou" placeholder="Deine nativere Fassung …"></textarea>
+      <textarea id="nuYou" placeholder="${t("nuPlaceholder")}"></textarea>
       <div class="row">
-        <button class="btn" id="reveal" type="button">Varianten zeigen</button>
-        <button class="btn ghost" id="next" type="button">Nächster Schnitt</button>
-        <button class="btn" id="doneBtn" type="button">Quest abhaken</button>
+        <button class="btn" id="reveal" type="button">${t("nuReveal")}</button>
+        <button class="btn ghost" id="next" type="button">${t("nuNext")}</button>
+        <button class="btn" id="doneBtn" type="button">${t("checkQuest")}</button>
       </div>
       <div id="nuWhy" class="hint"></div>
     </section>`;
   let i = 0;
   const show = () => {
     const it = items[i];
-    $("#nuPanel .kicker").textContent = `Feinschliff · ${it.tag}`;
+    $("#nuPanel .kicker").textContent = t("nuTag", { tag: it.tag });
     $("#nuTask").textContent = it.task;
-    $("#nuOff").textContent = "So nicht / zu glatt: " + it.off;
+    $("#nuOff").textContent = t("nuOff") + it.off;
     $("#nuYou").value = "";
     $("#nuWhy").innerHTML = "";
   };
@@ -839,19 +841,19 @@ function renderWrite() {
   view.innerHTML = `
     <section class="panel">
       ${backLink()}
-      <p class="kicker">Schreibsprint · ${p.title}</p>
+      <p class="kicker">${t("writeKicker", { title: p.title })}</p>
       <p class="prompt">${p.prompt}</p>
       ${criteriaList(WRITING_CRITERIA)}
       <textarea id="draft"></textarea>
-      <p class="hint" id="count">0 Wörter</p>
+      <p class="hint" id="count">${t("words", { n: 0 })}</p>
       <div class="row">
-        <button class="btn" id="doneBtn" type="button">Quest abhaken</button>
+        <button class="btn" id="doneBtn" type="button">${t("checkQuest")}</button>
       </div>
     </section>`;
   const draft = $("#draft");
   draft.oninput = () => {
     const n = draft.value.trim() ? draft.value.trim().split(/\s+/).length : 0;
-    $("#count").textContent = `${n} Wörter` + (n >= 180 && n <= 220 ? " · im Zielkorridor" : "");
+    $("#count").textContent = t("words", { n }) + (n >= 180 && n <= 220 ? t("wordsOk") : "");
   };
   $("#doneBtn").onclick = () => {
     complete("schreibsprint");
@@ -865,17 +867,17 @@ function renderListen() {
   view.innerHTML = `
     <section class="panel">
       ${backLink()}
-      <p class="kicker">Ohrenschärfe · heutige Quelle</p>
+      <p class="kicker">${t("listenKicker")}</p>
       <h2>${item.name}</h2>
       <p class="lede">${item.why}</p>
       <p class="prompt">${item.task}</p>
-      <p><a href="${item.url}" target="_blank" rel="noopener">Quelle öffnen</a></p>
+      <p><a href="${item.url}" target="_blank" rel="noopener">${t("openSource")}</a></p>
       <div class="sources">
         ${LISTEN.map((x) => `<a href="${x.url}" target="_blank" rel="noopener"><strong>${x.name}</strong><br><span class="hint">${x.why}</span></a>`).join("")}
       </div>
-      <textarea placeholder="Stichworte, dann laut zusammenfassen …"></textarea>
+      <textarea placeholder="${t("listenPlaceholder")}"></textarea>
       <div class="row">
-        <button class="btn" id="doneBtn" type="button">Quest abhaken</button>
+        <button class="btn" id="doneBtn" type="button">${t("checkQuest")}</button>
       </div>
     </section>`;
   $("#doneBtn").onclick = () => {
@@ -891,26 +893,26 @@ function renderZeitung() {
   view.innerHTML = `
     <section class="panel">
       ${backLink(wait ? "plan" : "heute")}
-      <p class="kicker">Zeitung vorlesen · Tag ${pack.n} · ${item.outlet} · ${item.genre}</p>
+      <p class="kicker">${t("pressKicker", { n: pack.n, outlet: item.outlet, genre: item.genre })}</p>
       <h2>${item.title}</h2>
-      <p class="lede">Zehn Minuten mündliche Ausgabe: sieben Minuten Lautlesen (Rhythmus, Intonation, C1), drei Minuten Pointe oder Kritik. Danach KI nur zu Klang und Sprachgefühl — keine Note.</p>
-      ${wait ? `<p class="hint">Vorschau bis zum 30. Oktober — du kannst die Aufgabe lesen und den Timer üben, abhaken gilt erst ab Start.</p>` : ""}
+      <p class="lede">${t("pressLede")}</p>
+      ${wait ? `<p class="hint">${t("pressPreview")}</p>` : ""}
       <p class="prompt">${item.read}</p>
-      <p class="hint"><strong>Danach:</strong> ${item.followup}</p>
-      <p><a href="${item.url}" target="_blank" rel="noopener">Artikel / Rubrik öffnen (${item.outlet})</a></p>
+      <p class="hint"><strong>${t("thereafter")}:</strong> ${item.followup}</p>
+      <p><a href="${item.url}" target="_blank" rel="noopener">${t("openArticle", { outlet: item.outlet })}</a></p>
       <p class="timer" id="timer">10:00</p>
       <div class="row">
-        <button class="btn small" id="t10" type="button">10:00 Start</button>
-        <button class="btn ghost small" id="t7" type="button">7:00 Lautlesen</button>
-        <button class="btn ghost small" id="t3" type="button">3:00 Pointe</button>
-        <button class="btn" id="recBtn" type="button">Aufnahme</button>
-        <button class="btn ghost" id="kiBtn" type="button">KI korrigieren</button>
-        <button class="btn ghost" id="doneBtn" type="button">Quest abhaken</button>
+        <button class="btn small" id="t10" type="button">${t("t10")}</button>
+        <button class="btn ghost small" id="t7" type="button">${t("t7")}</button>
+        <button class="btn ghost small" id="t3" type="button">${t("t3")}</button>
+        <button class="btn" id="recBtn" type="button">${t("recShort")}</button>
+        <button class="btn ghost" id="kiBtn" type="button">${t("kiFix")}</button>
+        <button class="btn ghost" id="doneBtn" type="button">${t("checkQuest")}</button>
       </div>
       <audio id="player" class="hidden" controls></audio>
-      <textarea id="pressTranscript" placeholder="Transkript (läuft mit, wenn der Browser zuhört — sonst hier tippen) …"></textarea>
-      <p class="note" id="pressNote">${canRecognize() ? "Aufnahme startet auch die Erkennung. Stoppen löst die KI-Korrektur aus." : "Keine Web-Speech-API — Transkript tippen, dann KI korrigieren."} Kein Scoring.</p>
-      <div class="live" id="kiBox">Noch keine Korrektur. Nach dem Vorlesen: Aufnahme stoppen oder „KI korrigieren“.</div>
+      <textarea id="pressTranscript" placeholder="${t("pressPlaceholder")}"></textarea>
+      <p class="note" id="pressNote">${canRecognize() ? t("pressNoteLive") : t("pressNoteType")}${t("noScore")}</p>
+      <div class="live" id="kiBox">${t("pressEmpty")}</div>
     </section>`;
   $("#t10").onclick = () => startCountdown($("#timer"), 600);
   $("#t7").onclick = () => startCountdown($("#timer"), 420);
@@ -940,21 +942,21 @@ function renderZeitung() {
         listen = null;
       },
       onerror() {
-        note.textContent = "Erkennung abgebrochen. Transkript kannst du tippen.";
+        note.textContent = t("pressAbort");
       },
     });
     listen?.start();
   };
   const runKi = async () => {
     const transcript = ta.value.trim();
-    box.textContent = "KI hört auf Aussprache und Sprachgefühl …";
+    box.textContent = t("pressKi");
     try {
       const reply = await kiPressChat(pack, item, transcript);
       box.textContent = reply;
       speak(reply, { rate: 0.95 });
     } catch (e) {
       const local = localLautlesenNote(item, transcript);
-      box.textContent = `${local}\n\n(Lokal, kein Scoring. ${e.message})`;
+      box.textContent = `${local}${t("pressLocal", { msg: e.message })}`;
       speak(local.split("\n").filter((l) => l.startsWith("So eher:")).slice(0, 2).join(" "), { rate: 0.95 });
     }
   };
@@ -984,9 +986,9 @@ function renderZuege() {
   view.innerHTML = `
     <section class="panel">
       ${backLink("sprechen")}
-      <p class="kicker">Sprechzüge · keine Liste</p>
-      <h2>Drei Formeln, eine Rede</h2>
-      <p class="lede">Nicht abhaken, nicht übersetzen. Die drei Züge müssen die These tragen — sonst hast du nur dekoriert.</p>
+      <p class="kicker">${t("zuegeKicker")}</p>
+      <h2>${t("zuegeH2")}</h2>
+      <p class="lede">${t("zuegeLede")}</p>
       <p class="prompt">${thesis}</p>
       <div class="zuege">
         ${three.map((z) => `
@@ -996,11 +998,11 @@ function renderZuege() {
             <p class="ban">${z.ban}</p>
           </article>`).join("")}
       </div>
-      <p class="hint">90 Sekunden Stellungnahme, alle drei Züge lasttragend. Danach 45 Sekunden Küche: dieselben Züge, anderes Register.</p>
+      <p class="hint">${t("zuegeHint")}</p>
       <div class="row">
-        <button class="btn" id="recBtn" type="button">Aufnahme</button>
-        <button class="btn ghost" id="coach" type="button">Woran man's hört</button>
-        <button class="btn" id="doneBtn" type="button">Quest abhaken</button>
+        <button class="btn" id="recBtn" type="button">${t("recShort")}</button>
+        <button class="btn ghost" id="coach" type="button">${t("coach")}</button>
+        <button class="btn" id="doneBtn" type="button">${t("checkQuest")}</button>
       </div>
       <audio id="player" class="hidden" controls></audio>
       <div id="coachBox" class="hint"></div>
@@ -1012,7 +1014,7 @@ function renderZuege() {
   });
   $("#coach").onclick = () => {
     $("#coachBox").innerHTML = `<ul class="list">${three.map((z) => `<li><strong>${z.chunk}</strong> — ${z.load}</li>`).join("")}</ul>
-      <p class="note">Wenn ein Zug auch wegfallen könnte, ohne dass die Rede kippt, war er Zierat. Nochmal.</p>`;
+      <p class="note">${t("coachNote")}</p>`;
     speak(three.map((z) => z.chunk).join(" "), { rate: 0.95 });
   };
   $("#doneBtn").onclick = () => {
@@ -1026,15 +1028,15 @@ function renderSettings() {
   view.innerHTML = `
     <section class="panel">
       ${backLink()}
-      <p class="kicker">Einstellungen</p>
-      <h2>Optional: KI, nur Sprachgefühl</h2>
-      <p class="lede">Kein Scoring, keine Predigt. Die KI darf höchstens eine native Variante vorschlagen („So eher: …“) und dann in der Rolle weitersprechen. Schlüssel lokal, Server: <code>python3 server.py</code>.</p>
-      <label>API-Key
+      <p class="kicker">${t("setupKicker")}</p>
+      <h2>${t("setupH2")}</h2>
+      <p class="lede">${t("setupLede")}</p>
+      <label>${t("apiKey")}
         <input id="key" type="password" value="${s.openaiKey || ""}" autocomplete="off" />
       </label>
       <div class="row">
-        <button class="btn" id="save" type="button">Speichern</button>
-        <button class="btn ghost" id="reset" type="button">Fortschritt löschen</button>
+        <button class="btn" id="save" type="button">${t("save")}</button>
+        <button class="btn ghost" id="reset" type="button">${t("reset")}</button>
       </div>
       <p class="note" id="msg"></p>
     </section>`;
@@ -1042,14 +1044,14 @@ function renderSettings() {
     state = ensureDay(load());
     state.openaiKey = $("#key").value.trim();
     save(state);
-    $("#msg").textContent = "Gespeichert.";
+    $("#msg").textContent = t("saved");
   };
   $("#reset").onclick = () => {
     localStorage.removeItem(STORAGE);
     state = ensureDay({});
     save(state);
     renderHud();
-    $("#msg").textContent = "Stand auf null.";
+    $("#msg").textContent = t("resetDone");
   };
 }
 
@@ -1060,8 +1062,13 @@ document.body.addEventListener("click", (e) => {
 });
 
 window.addEventListener("hashchange", route);
-$("#appName").textContent = APP.name;
-$("#tagline").textContent = APP.tagline;
+$("#langBtn")?.addEventListener("click", () => {
+  toggleLang();
+  applyChrome();
+  renderHud();
+  route();
+});
+applyChrome();
 renderHud();
 route();
 window.speechSynthesis?.getVoices();
